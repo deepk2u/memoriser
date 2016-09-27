@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container">
+  <h2>Text:</h2>
+  <p>Input your text for counting:</p>
+  <form role="form" action="{{ url_for('text') }}" method="POST">
+    <div class="form-group">
+      <textarea class="form-control" rows="10" name="text" id="comment"></textarea>
+    </div>
+    <input type="submit" class="btn btn-primary" value="Submit">
+  </form>
+</div>
+
+
+<div class="col-sm-5 col-sm-offset-1">
+  {% if results %}
+    <h2>Frequencies</h2>
+    <br>
+    <div id="results">
+      <table class="table table-striped" style="max-width: 300px;">
+        <thead>
+          <tr>
+            <th>Word</th>
+            <th>Count</th>
+          </tr>
+        </thead>
+        {% for result in results%}
+          <tr>
+            <td>{{ result[0] }}</td>
+            <td>{{ result[1] }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
