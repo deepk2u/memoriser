@@ -89,8 +89,9 @@ def text():
                 app.logger.info(resp.text)
                 json_data = json.loads(resp.text)
                 dic = deep_search(["examples"], json.loads(resp.text))
-                para += str(dic["examples"][0])
-                para += ". "
+                if "examples" in dic:
+                        para += str(dic["examples"][0])
+                        para += ". "
         
     return render_template('text.html', title="Text", results=results, para=para)
     
