@@ -9,7 +9,9 @@ from flask_nav.elements import Navbar, View
 import logging
 from logging.handlers import RotatingFileHandler
 
+from xml.dom.minidom import parseString
 import requests
+import json
 
 app = Flask(__name__)
 Bootstrap(app)
@@ -41,18 +43,38 @@ def add(a, b):
 def about():
     return render_template('about.html', title="About")
 
+def deep_search(needles, haystack):
+    found = {}
+    if type(needles) != type([]):
+        needles = [needles]
+
+    if type(haystack) == type(dict()):
+        for needle in needles:
+            if needle in haystack.keys():
+                found[needle] = haystack[needle]
+            elif len(haystack.keys()) > 0:
+                for key in haystack.keys():
+                    result = deep_search(needle, haystack[key])
+                    if result:
+                        for k, v in result.items():
+                            found[k] = v
+    elif type(haystack) == type([]):
+        for node in haystack:
+            result = deep_search(needles, node)
+            if result:
+                for k, v in result.items():
+                    found[k] = v
+    return found
+
 @app.route('/text', methods=['GET', 'POST'])
 def text():
     results = {}
+    url = 'https://content.googleapis.com/dictionaryextension/v1/knowledge/search'
+    headers = {'x-origin': 'chrome-extension://mgijmajocgfcbeboacabfgobmjgjcoja'}
+    para = ""
     if request.method == 'POST':
         raw = request.form.get('text')
         app.logger.info(raw)
-        
-        url = 'https://content.googleapis.com/dictionaryextension/v1/knowledge/search'
-        payload = {'term': 'aberrant', 'language': 'en', 'key': 'AIzaSyC9PDwo2wgENKuI8DSFOfqFqKP2cKAxxso'}
-        headers = {'x-origin': 'chrome-extension://mgijmajocgfcbeboacabfgobmjgjcoja'}
-        resp = requests.get(url, headers=headers, params=payload)
-        app.logger.info(resp.text)
         
         nltk.data.path.append('./nltk_data/')  # set the path
         tokens = nltk.word_tokenize(raw)
@@ -60,11 +82,19 @@ def text():
         nonPunct = re.compile('.*[A-Za-z0-9].*')
         filtered = [w for w in text if nonPunct.match(w)]
         results = Counter(filtered).items()
-        
         for result in results:
                 app.logger.info(result[0])
+                payload = {'term': result[0], 'language': 'en', 'key': 'AIzaSyC9PDwo2wgENKuI8DSFOfqFqKP2cKAxxso'}
+                resp = requests.get(url, headers=headers, params=payload)
+                app.logger.info(resp.text)
+                json_data = json.loads(resp.text)
+                dic = deep_search(["examples"], json.loads(resp.text))
+                para += str(dic["examples"][0])
+                para += ". "
         
-    return render_template('text.html', title="Text", results=results)
+    return render_template('text.html', title="Text", results=results, para=para)
+    
+
 
 if __name__ == "__main__":
     handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=1)
